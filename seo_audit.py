@@ -10,7 +10,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
 # API Key for Google PageSpeed Insights (Replace with your actual API key)
-GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
+GOOGLE_API_KEY = "AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc"
 
 # Function to fetch page content
 def get_page_content(url):
@@ -50,21 +50,52 @@ def analyze_h1_tags(soup):
     return h1_tags
 
 # Function to get Google PageSpeed Insights (with error handling)
-def get_pagespeed_insights(url):
+def get_pagespeed_insights(url, strategy="mobile"):
+    """
+    Fetches PageSpeed Insights for a given URL.
+    
+    Args:
+        url (str): The website URL to analyze.
+        strategy (str): "mobile" or "desktop" for the analysis.
+
+    Returns:
+        dict: PageSpeed scores and Core Web Vitals.
+    """
     try:
         service = build("pagespeedonline", "v5", developerKey=AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc)
-        result = service.pagespeedapi().runpagespeed(url, strategy="mobile").execute()
+        result = service.pagespeedapi().runpagespeed(url, strategy=strategy).execute()
 
-        # Ensure the structure exists before accessing it
+        # Extracting relevant data
         lighthouse_data = result.get("lighthouseResult", {})
         categories = lighthouse_data.get("categories", {})
-        performance_data = categories.get("performance", {})
+        audits = lighthouse_data.get("audits", {})
 
-        score = performance_data.get("score")
-        return {"Performance Score": score * 100 if score is not None else "⚠️ Not Available"}
-    
+        # Performance score (scaled to 100)
+        performance_score = categories.get("performance", {}).get("score")
+        performance_score = performance_score * 100 if performance_score is not None else "⚠️ Not Available"
+
+        # Extract key Core Web Vitals
+        core_web_vitals = {
+            "First Contentful Paint (FCP)": audits.get("first-contentful-paint", {}).get("displayValue", "N/A"),
+            "Largest Contentful Paint (LCP)": audits.get("largest-contentful-paint", {}).get("displayValue", "N/A"),
+            "Cumulative Layout Shift (CLS)": audits.get("cumulative-layout-shift", {}).get("displayValue", "N/A"),
+            "Total Blocking Time (TBT)": audits.get("total-blocking-time", {}).get("displayValue", "N/A"),
+            "Speed Index": audits.get("speed-index", {}).get("displayValue", "N/A"),
+        }
+
+        return {
+            "Performance Score": performance_score,
+            "Core Web Vitals": core_web_vitals,
+            "Strategy": strategy.capitalize(),
+        }
+
     except Exception as e:
-        return {"Performance Score": "⚠️ Not Available", "Error": str(e)}
+        return {
+            "Performance Score": "⚠️ Not Available",
+            "Core Web Vitals": {},
+            "Error": str(e),
+            "Strategy": strategy.capitalize(),
+        }
 
 # Function to generate a PDF report
 def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
