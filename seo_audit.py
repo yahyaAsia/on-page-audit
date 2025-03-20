@@ -1,8 +1,6 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import re
-import json
 import validators
 import urllib.parse
 
@@ -12,15 +10,15 @@ def get_page_content(url):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         return response.text
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         return None
 
-# Function to analyze metadata (Title, Meta Description)
+# Function to analyze metadata
 def analyze_metadata(soup):
-    title = soup.title.string if soup.title else "No Title Found"
+    title = soup.title.string if soup.title else "❌ No Title Found"
     meta_desc = soup.find("meta", attrs={"name": "description"})
-    meta_desc = meta_desc["content"] if meta_desc else "No Meta Description Found"
-    
+    meta_desc = meta_desc["content"] if meta_desc else "❌ No Meta Description Found"
+
     return {
         "Title": title,
         "Meta Description": meta_desc,
@@ -30,13 +28,9 @@ def analyze_metadata(soup):
 
 # Function to check internal links
 def check_internal_links(soup, base_url):
-    internal_links = []
-    broken_links = []
-
+    internal_links, broken_links = [], []
     for link in soup.find_all("a", href=True):
-        href = link["href"]
-        full_url = urllib.parse.urljoin(base_url, href)
-        
+        full_url = urllib.parse.urljoin(base_url, link["href"])
         if base_url in full_url:
             try:
                 response = requests.head(full_url, timeout=5)
@@ -47,45 +41,21 @@ def check_internal_links(soup, base_url):
             except:
                 broken_links.append(full_url)
 
-    return {
-        "Total Internal Links": len(internal_links),
-        "Broken Internal Links": broken_links
-    }
+    return internal_links, broken_links
 
 # Function to analyze H1 tags
 def analyze_h1_tags(soup):
     h1_tags = [h1.get_text(strip=True) for h1 in soup.find_all("h1")]
-    return {
-        "Total H1 Tags": len(h1_tags),
-        "H1 Tags": h1_tags,
-        "Suggestion": "Use only one main H1 tag for better SEO" if len(h1_tags) > 1 else "Looks Good!"
-    }
+    return h1_tags, "⚠️ Use only one main H1 tag for SEO!" if len(h1_tags) > 1 else "✅ Good!"
 
-# Function to analyze anchor texts
-def analyze_anchor_texts(soup):
-    anchor_texts = [a.get_text(strip=True) for a in soup.find_all("a")]
-    empty_anchors = [a for a in anchor_texts if not a]
-
-    return {
-        "Total Anchor Links": len(anchor_texts),
-        "Empty Anchor Texts": len(empty_anchors),
-        "Suggestion": "Ensure all links have meaningful anchor texts."
-    }
-
-# Function to analyze images (alt texts, broken images)
+# Function to analyze images
 def analyze_images(soup, base_url):
-    images = soup.find_all("img")
-    missing_alt = []
-    broken_images = []
-
+    images, missing_alt, broken_images = soup.find_all("img"), [], []
     for img in images:
         src = img.get("src")
-        alt_text = img.get("alt", "").strip()
-        
         full_src = urllib.parse.urljoin(base_url, src)
-        if not alt_text:
+        if not img.get("alt", "").strip():
             missing_alt.append(full_src)
-        
         try:
             response = requests.head(full_src, timeout=5)
             if response.status_code >= 400:
@@ -93,129 +63,88 @@ def analyze_images(soup, base_url):
         except:
             broken_images.append(full_src)
 
-    return {
-        "Total Images": len(images),
-        "Images Missing Alt Text": missing_alt,
-        "Broken Images": broken_images
-    }
-
-# Function to check accessibility issues (redirects, loops)
-def check_accessibility(url):
-    try:
-        response = requests.get(url, timeout=10, allow_redirects=True)
-        final_url = response.url
-        return {
-            "Final URL": final_url,
-            "Redirect Count": len(response.history),
-            "Status Code": response.status_code
-        }
-    except requests.exceptions.RequestException:
-        return {"Error": "URL is not accessible"}
-
-# Function to analyze crawlability (JS, CSS issues)
-def check_crawlability(soup):
-    scripts = soup.find_all("script", src=True)
-    stylesheets = soup.find_all("link", rel="stylesheet")
-
-    broken_scripts = []
-    broken_stylesheets = []
-
-    for script in scripts:
-        src = script["src"]
-        try:
-            response = requests.head(src, timeout=5)
-            if response.status_code >= 400:
-                broken_scripts.append(src)
-        except:
-            broken_scripts.append(src)
-
-    for css in stylesheets:
-        href = css["href"]
-        try:
-            response = requests.head(href, timeout=5)
-            if response.status_code >= 400:
-                broken_stylesheets.append(href)
-        except:
-            broken_stylesheets.append(href)
-
-    return {
-        "Broken JS Files": broken_scripts,
-        "Broken CSS Files": broken_stylesheets
-    }
-
-# Function to get Page Speed Insights via Google Lighthouse API
-def analyze_page_speed(url):
-    try:
-        import subprocess
-        result = subprocess.run(
-            ["lighthouse", url, "--quiet", "--output=json"],
-            capture_output=True,
-            text=True
-        )
-        lighthouse_data = json.loads(result.stdout)
-        fcp = lighthouse_data["audits"]["first-contentful-paint"]["displayValue"]
-        return {"First Contentful Paint": fcp}
-    except:
-        return {"Error": "Lighthouse API Not Configured"}
+    return len(images), missing_alt, broken_images
 
 # Streamlit UI
-st.title("One Page SEO Audit Tool")
-st.markdown("### Enter a URL to analyze its SEO performance:")
+st.set_page_config(page_title="SEO Audit Tool", layout="wide")
 
-url = st.text_input("Website URL", "")
+st.title("🕵️ One Page SEO Audit Tool")
+st.markdown("**Enter a URL to analyze its SEO performance.**")
 
-if st.button("Analyze"):
+url = st.text_input("🔗 Enter Website URL", "")
+
+if st.button("🔍 Analyze"):
     if validators.url(url):
-        st.write("Fetching data... Please wait.")
-
+        st.info("Fetching data... Please wait.")
         page_content = get_page_content(url)
+
         if page_content:
             soup = BeautifulSoup(page_content, "html.parser")
 
-            # SEO Insights
-            st.subheader("🔍 SEO Audit Results")
-            
-            # Metadata
+            # **Metadata Analysis**
+            st.header("🏷️ **Metadata Analysis**")
             meta_data = analyze_metadata(soup)
-            st.write("🏷️ **Title & Meta Description Analysis**")
-            st.json(meta_data)
+            col1, col2 = st.columns(2)
+            col1.metric("Title", meta_data["Title"], f"{meta_data['Title Length']} chars")
+            col2.metric("Meta Description", meta_data["Meta Description"], f"{meta_data['Meta Description Length']} chars")
 
-            # Internal Links
-            links_data = check_internal_links(soup, url)
-            st.write("🔗 **Internal Link Verification**")
-            st.json(links_data)
+            # **Internal Links**
+            internal_links, broken_links = check_internal_links(soup, url)
+            st.header("🔗 **Internal Link Verification**")
+            st.metric("Total Internal Links", len(internal_links))
+            st.metric("Broken Links", len(broken_links), delta_color="inverse")
 
-            # H1 Tags
-            h1_data = analyze_h1_tags(soup)
-            st.write("🔖 **H1 Tag Examination**")
-            st.json(h1_data)
+            if broken_links:
+                with st.expander("⚠️ View Broken Links"):
+                    st.write(broken_links)
 
-            # Anchor Texts
-            anchor_data = analyze_anchor_texts(soup)
-            st.write("⚓ **Link Anchor Text Review**")
-            st.json(anchor_data)
+            # **H1 Tags**
+            h1_tags, h1_warning = analyze_h1_tags(soup)
+            st.header("🔖 **H1 Tag Analysis**")
+            st.metric("Total H1 Tags", len(h1_tags), h1_warning)
+            if h1_tags:
+                with st.expander("🔍 View H1 Tags"):
+                    st.write(h1_tags)
 
-            # Image Analysis
-            image_data = analyze_images(soup, url)
-            st.write("🖼️ **Image Diagnostics**")
-            st.json(image_data)
+            # **Image Analysis**
+            total_images, missing_alt, broken_images = analyze_images(soup, url)
+            st.header("🖼️ **Image Analysis**")
+            col3, col4, col5 = st.columns(3)
+            col3.metric("Total Images", total_images)
+            col4.metric("Missing Alt Text", len(missing_alt), delta_color="inverse")
+            col5.metric("Broken Images", len(broken_images), delta_color="inverse")
 
-            # Accessibility Check
-            accessibility_data = check_accessibility(url)
-            st.write("♿ **Accessibility Assessment**")
-            st.json(accessibility_data)
+            if missing_alt:
+                with st.expander("⚠️ View Images Without Alt Text"):
+                    st.write(missing_alt)
 
-            # Crawlability
-            crawlability_data = check_crawlability(soup)
-            st.write("🕷️ **Crawlability Check**")
-            st.json(crawlability_data)
+            if broken_images:
+                with st.expander("⚠️ View Broken Images"):
+                    st.write(broken_images)
 
-            # Page Speed Insights
-            speed_data = analyze_page_speed(url)
-            st.write("⚡ **Page Speed Insights**")
-            st.json(speed_data)
+            # **Final Recommendations**
+            st.header("✅ **SEO Recommendations**")
+            recommendations = []
+            if meta_data["Title Length"] > 60:
+                recommendations.append("🔹 Title is too long. Keep it under 60 characters.")
+            if meta_data["Meta Description Length"] > 160:
+                recommendations.append("🔹 Meta description is too long. Keep it under 160 characters.")
+            if len(h1_tags) > 1:
+                recommendations.append("🔹 Use only **one main H1 tag** for SEO.")
+            if broken_links:
+                recommendations.append(f"🔹 Fix {len(broken_links)} broken internal links.")
+            if missing_alt:
+                recommendations.append(f"🔹 Add alt text to {len(missing_alt)} images.")
+            if broken_images:
+                recommendations.append(f"🔹 Fix {len(broken_images)} broken images.")
+
+            if recommendations:
+                for rec in recommendations:
+                    st.warning(rec)
+            else:
+                st.success("🎉 No major SEO issues found!")
+
         else:
-            st.error("Could not fetch the webpage. Please check the URL and try again.")
+            st.error("❌ Could not fetch the webpage. Please check the URL.")
     else:
-        st.error("Invalid URL. Please enter a valid one.")
-
+        st.error("❌ Invalid URL. Please enter a valid one.")
