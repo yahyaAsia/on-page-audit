@@ -9,8 +9,8 @@ import io
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-# API Key for Google PageSpeed Insights
-GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"  # Replace with your actual API Key
+# API Key for Google PageSpeed Insights (Replace with your actual API key)
+GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
 
 # Function to fetch page content
 def get_page_content(url):
@@ -49,15 +49,22 @@ def analyze_h1_tags(soup):
     h1_tags = [h1.get_text(strip=True) for h1 in soup.find_all("h1")]
     return h1_tags
 
-# Function to get Google PageSpeed Insights
+# Function to get Google PageSpeed Insights (with error handling)
 def get_pagespeed_insights(url):
     try:
-        service = build("pagespeedonline", "v5", developerKey=GOOGLE_API_KEY)
+        service = build("pagespeedonline", "v5", developerKey=AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc)
         result = service.pagespeedapi().runpagespeed(url, strategy="mobile").execute()
-        score = result["lighthouseResult"]["categories"]["performance"]["score"] * 100
-        return {"Performance Score": score}
-    except:
-        return {"Error": "Failed to fetch PageSpeed data"}
+
+        # Ensure the structure exists before accessing it
+        lighthouse_data = result.get("lighthouseResult", {})
+        categories = lighthouse_data.get("categories", {})
+        performance_data = categories.get("performance", {})
+
+        score = performance_data.get("score")
+        return {"Performance Score": score * 100 if score is not None else "⚠️ Not Available"}
+    
+    except Exception as e:
+        return {"Performance Score": "⚠️ Not Available", "Error": str(e)}
 
 # Function to generate a PDF report
 def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
@@ -96,8 +103,11 @@ def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
     # PageSpeed Score
     pdf.setFont("Helvetica-Bold", 14)
     pdf.drawString(100, 510, "⚡ PageSpeed Insights")
+
+    # Ensure the score exists before drawing it
+    score = speed_score.get("Performance Score", "⚠️ Not Available")
     pdf.setFont("Helvetica", 12)
-    pdf.drawString(100, 490, f"Mobile Performance Score: {speed_score['Performance Score']} / 100")
+    pdf.drawString(100, 490, f"Mobile Performance Score: {score} / 100")
 
     pdf.save()
     buffer.seek(0)
@@ -140,38 +150,6 @@ if st.button("🔍 Analyze"):
             speed_score1 = get_pagespeed_insights(url1)
             st.header("⚡ **Google PageSpeed Score**")
             st.write(speed_score1)
-
-            # Compare Competitor Website
-            if url2 and validators.url(url2):
-                st.markdown("---")
-                st.header("🆚 Competitor Analysis")
-
-                page_content2 = get_page_content(url2)
-                if page_content2:
-                    soup2 = BeautifulSoup(page_content2, "html.parser")
-
-                    metadata2 = analyze_metadata(soup2)
-                    links2 = check_internal_links(soup2, url2)
-                    h1_tags2 = analyze_h1_tags(soup2)
-                    speed_score2 = get_pagespeed_insights(url2)
-
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        st.subheader("Your Page")
-                        st.write(metadata1)
-                        st.write(f"Total Internal Links: {len(links1[0])}")
-                        st.write(f"Broken Links: {len(links1[1])}")
-                        st.write(f"H1 Tags: {len(h1_tags1)}", h1_tags1)
-                        st.write(f"PageSpeed Score: {speed_score1}")
-
-                    with col2:
-                        st.subheader("Competitor Page")
-                        st.write(metadata2)
-                        st.write(f"Total Internal Links: {len(links2[0])}")
-                        st.write(f"Broken Links: {len(links2[1])}")
-                        st.write(f"H1 Tags: {len(h1_tags2)}", h1_tags2)
-                        st.write(f"PageSpeed Score: {speed_score2}")
 
             # Generate and Download Report
             pdf_buffer = generate_pdf_report(url1, metadata1, links1, h1_tags1, speed_score1)
