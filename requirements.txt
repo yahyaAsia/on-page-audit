@@ -4,3 +4,4 @@ requests
 validators
 lxml
 reportlab
+google-api-python-client
