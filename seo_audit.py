@@ -62,10 +62,19 @@ def get_pagespeed_insights(url, strategy="mobile"):
         dict: PageSpeed scores and Core Web Vitals.
     """
     try:
-        service = build("pagespeedonline", "v5", developerKey=AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc)
+        if not GOOGLE_API_KEY or GOOGLE_API_KEY == "YOUR_GOOGLE_API_KEY":
+            return {
+                "Performance Score": "⚠️ API Key Missing",
+                "Core Web Vitals": {},
+                "Error": "No valid API Key found. Please set GOOGLE_API_KEY correctly.",
+                "Strategy": strategy.capitalize(),
+            }
+
+        # Initialize the API service
+        service = build("pagespeedonline", "v5", developerKey=GOOGLE_API_KEY)
         result = service.pagespeedapi().runpagespeed(url, strategy=strategy).execute()
 
-        # Extracting relevant data
+        # Extract relevant data
         lighthouse_data = result.get("lighthouseResult", {})
         categories = lighthouse_data.get("categories", {})
         audits = lighthouse_data.get("audits", {})
@@ -74,7 +83,7 @@ def get_pagespeed_insights(url, strategy="mobile"):
         performance_score = categories.get("performance", {}).get("score")
         performance_score = performance_score * 100 if performance_score is not None else "⚠️ Not Available"
 
-        # Extract key Core Web Vitals
+        # Extract Core Web Vitals
         core_web_vitals = {
             "First Contentful Paint (FCP)": audits.get("first-contentful-paint", {}).get("displayValue", "N/A"),
             "Largest Contentful Paint (LCP)": audits.get("largest-contentful-paint", {}).get("displayValue", "N/A"),
