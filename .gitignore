@@ -1,0 +1,18 @@
+# Python cache and virtual environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+*.log
+
+# Streamlit cache
+.streamlit/
+
+# VS Code settings
+.vscode/
+
+# Lighthouse reports
+*.json
