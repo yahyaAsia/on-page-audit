@@ -8,7 +8,7 @@ import json
 from googleapiclient.discovery import build
 
 # API Key for Google PageSpeed Insights
-GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"
+GOOGLE_API_KEY = "AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc"
 
 # Function to fetch page content
 def get_page_content(url):
