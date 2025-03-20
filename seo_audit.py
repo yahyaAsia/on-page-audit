@@ -1,14 +1,16 @@
 import streamlit as st
 import requests
-import pdfkit
 from bs4 import BeautifulSoup
 import validators
 import urllib.parse
 import json
 from googleapiclient.discovery import build
+import io
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 # API Key for Google PageSpeed Insights
-GOOGLE_API_KEY = "AIzaSyBw_Q3wQxHcC4IGI2Gb84Ux73ghPGQPQWc"
+GOOGLE_API_KEY = "YOUR_GOOGLE_API_KEY"  # Replace with your actual API Key
 
 # Function to fetch page content
 def get_page_content(url):
@@ -59,33 +61,52 @@ def get_pagespeed_insights(url):
 
 # Function to generate a PDF report
 def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
-    html_content = f"""
-    <h1>SEO Audit Report</h1>
-    <h2>Website: {url}</h2>
-    
-    <h3>🏷️ Metadata</h3>
-    <p><b>Title:</b> {metadata['Title']}</p>
-    <p><b>Meta Description:</b> {metadata['Meta Description']}</p>
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
+    pdf.setTitle("SEO Audit Report")
 
-    <h3>🔗 Internal Links</h3>
-    <p><b>Total Internal Links:</b> {len(links[0])}</p>
-    <p><b>Broken Links:</b> {len(links[1])}</p>
+    # Title
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.drawString(100, 750, "SEO Audit Report")
 
-    <h3>🔖 H1 Tags</h3>
-    <p><b>H1 Count:</b> {len(h1_tags)}</p>
-    <ul>{"".join([f"<li>{h}</li>" for h in h1_tags])}</ul>
+    # Website URL
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, 730, f"Website: {url}")
 
-    <h3>⚡ PageSpeed Score</h3>
-    <p><b>Mobile Performance Score:</b> {speed_score['Performance Score']} / 100</p>
-    """
-    
-    pdfkit.from_string(html_content, "SEO_Audit_Report.pdf")
-    return "SEO_Audit_Report.pdf"
+    # Metadata
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(100, 700, "🏷️ Metadata Analysis")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, 680, f"Title: {metadata['Title']}")
+    pdf.drawString(100, 660, f"Meta Description: {metadata['Meta Description']}")
+
+    # Internal Links
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(100, 630, "🔗 Internal Link Verification")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, 610, f"Total Internal Links: {len(links[0])}")
+    pdf.drawString(100, 590, f"Broken Links: {len(links[1])}")
+
+    # H1 Tags
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(100, 560, "🔖 H1 Tag Analysis")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, 540, f"H1 Count: {len(h1_tags)}")
+
+    # PageSpeed Score
+    pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(100, 510, "⚡ PageSpeed Insights")
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(100, 490, f"Mobile Performance Score: {speed_score['Performance Score']} / 100")
+
+    pdf.save()
+    buffer.seek(0)
+    return buffer
 
 # Streamlit UI
 st.set_page_config(page_title="Advanced SEO Audit Tool", layout="wide")
 
-st.title(" Advanced SEO Audit Tool")
+st.title("🕵️ Advanced SEO Audit Tool")
 st.markdown("Analyze your **SEO performance, speed, and technical issues**. Compare two pages and export reports.")
 
 url1 = st.text_input("🔗 Enter First Website URL", "")
@@ -101,29 +122,29 @@ if st.button("🔍 Analyze"):
 
             # Metadata Analysis
             metadata1 = analyze_metadata(soup1)
-            st.header(" **Metadata Analysis**")
+            st.header("🏷️ **Metadata Analysis**")
             st.write(metadata1)
 
             # Internal Links Analysis
             links1 = check_internal_links(soup1, url1)
-            st.header(" **Internal Link Verification**")
+            st.header("🔗 **Internal Link Verification**")
             st.write(f"Total Internal Links: {len(links1[0])}")
             st.write(f"Broken Links: {len(links1[1])}")
 
             # H1 Tags Analysis
             h1_tags1 = analyze_h1_tags(soup1)
-            st.header(" **H1 Tag Analysis**")
+            st.header("🔖 **H1 Tag Analysis**")
             st.write(f"Total H1 Tags: {len(h1_tags1)}", h1_tags1)
 
             # PageSpeed Insights
             speed_score1 = get_pagespeed_insights(url1)
-            st.header(" **Google PageSpeed Score**")
+            st.header("⚡ **Google PageSpeed Score**")
             st.write(speed_score1)
 
             # Compare Competitor Website
             if url2 and validators.url(url2):
                 st.markdown("---")
-                st.header(" Competitor Analysis")
+                st.header("🆚 Competitor Analysis")
 
                 page_content2 = get_page_content(url2)
                 if page_content2:
@@ -153,9 +174,13 @@ if st.button("🔍 Analyze"):
                         st.write(f"PageSpeed Score: {speed_score2}")
 
             # Generate and Download Report
-            pdf_path = generate_pdf_report(url1, metadata1, links1, h1_tags1, speed_score1)
-            with open(pdf_path, "rb") as f:
-                st.download_button("📄 Download PDF Report", f, file_name="SEO_Audit_Report.pdf", mime="application/pdf")
+            pdf_buffer = generate_pdf_report(url1, metadata1, links1, h1_tags1, speed_score1)
+            st.download_button(
+                label="📄 Download PDF Report",
+                data=pdf_buffer,
+                file_name="SEO_Audit_Report.pdf",
+                mime="application/pdf",
+            )
 
         else:
             st.error("❌ Could not fetch the webpage.")
