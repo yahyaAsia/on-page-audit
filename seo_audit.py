@@ -155,7 +155,7 @@ def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
 
     # PageSpeed Score
     story.append(Paragraph("⚡ PageSpeed Insights", styles["Heading2"]))
-    score = speed SCORE.get("Performance Score", "⚠️ Not Available")
+    score = speed_score.get("Performance Score", "⚠️ Not Available")
     story.append(Paragraph(f"Mobile Performance Score: {score} / 100", styles["Normal"]))
     for metric, value in speed_score.get("Core Web Vitals", {}).items():
         story.append(Paragraph(f"{metric}: {value}", styles["Normal"]))
