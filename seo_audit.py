@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load Google API Key from Streamlit secrets
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("AIzaSyCL6J5KkQbBw_jiQrhbtZ_Mv2qY3_rcMpc")
 
 # Function to fetch page content
 def get_page_content(url):
@@ -138,7 +138,7 @@ def get_pagespeed_insights(url, strategy="mobile"):
             }
 
         logger.info(f"Fetching PageSpeed Insights for {url} ({strategy})")
-        service = build("pagespeedonline", "v5", developerKey=GOOGLE_API_KEY)
+        service = build("pagespeedonline", "v5", developerKey=AIzaSyCL6J5KkQbBw_jiQrhbtZ_Mv2qY3_rcMpc)
         result = service.pagespeedapi().runpagespeed(url=url, strategy=strategy).execute()
 
         lighthouse_data = result.get("lighthouseResult", {})
