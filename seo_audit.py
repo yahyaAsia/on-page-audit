@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("AIzaSyCL6J5KkQbBw_jiQrhbtZ_Mv2qY3_rcMpc")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Function to fetch page content with caching
 @cache
@@ -155,7 +155,7 @@ def generate_pdf_report(url, metadata, links, h1_tags, speed_score):
 
     # PageSpeed Score
     story.append(Paragraph("⚡ PageSpeed Insights", styles["Heading2"]))
-    score = speed_score.get("Performance Score", "⚠️ Not Available")
+    score = speed SCORE.get("Performance Score", "⚠️ Not Available")
     story.append(Paragraph(f"Mobile Performance Score: {score} / 100", styles["Normal"]))
     for metric, value in speed_score.get("Core Web Vitals", {}).items():
         story.append(Paragraph(f"{metric}: {value}", styles["Normal"]))
