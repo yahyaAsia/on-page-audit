@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("AIzaSyCL6J5KkQbBw_jiQrhbtZ_Mv2qY3_rcMpc")
 
 # Function to fetch page content with caching
 @cache
