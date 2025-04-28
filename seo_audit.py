@@ -21,8 +21,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load Google API Key from Streamlit secrets
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# Load PageSpeed API Key from Streamlit secrets
+PAGESPEED_API_KEY = os.getenv("PAGESPEED_API_KEY")
 
 # Function to fetch page content
 def get_page_content(url):
@@ -128,17 +128,17 @@ def additional_seo_metrics(soup):
 @lru_cache(maxsize=100)
 def get_pagespeed_insights(url, strategy="mobile"):
     try:
-        if not GOOGLE_API_KEY:
+        if not PAGESPEED_API_KEY:
             return {
                 "Performance Score": "⚠️ API Key Missing",
                 "Core Web Vitals": {},
                 "Mobile Friendliness": "N/A",
-                "Error": "No valid API Key found. Set GOOGLE_API_KEY in Streamlit secrets.",
+                "Error": "No valid API Key found. Set PAGESPEED_API_KEY in Streamlit secrets.",
                 "Strategy": strategy.capitalize(),
             }
 
         logger.info(f"Fetching PageSpeed Insights for {url} ({strategy})")
-        service = build("pagespeedonline", "v5", developerKey=GOOGLE_API_KEY)
+        service = build("pagespeedonline", "v5", developerKey=PAGESPEED_API_KEY)
         result = service.pagespeedapi().runpagespeed(url=url, strategy=strategy).execute()
 
         lighthouse_data = result.get("lighthouseResult", {})
@@ -192,7 +192,7 @@ def generate_pdf_report(url, analysis):
     story.append(Spacer(1, 12))
 
     # Metadata
-    story.append(Paragraph(", Metadata Analysis", styles["Heading2"]))
+    story.append(Paragraph("🏷️ Metadata Analysis", styles["Heading2"]))
     story.append(Paragraph(f"Title: {analysis['metadata']['Title']}", styles["Normal"]))
     story.append(Paragraph(f"Meta Description: {analysis['metadata']['Meta Description']}", styles["Normal"]))
     story.append(Spacer(1, 12))
